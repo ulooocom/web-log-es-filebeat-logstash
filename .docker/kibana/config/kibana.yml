@@ -1,0 +1,18 @@
+#
+# ** THIS IS AN AUTO-GENERATED FILE **
+#
+
+# Default Kibana configuration for docker target
+i18n.locale: "zh-CN"
+server.host: "0.0.0.0"
+server.shutdownTimeout: "5s"
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+monitoring.ui.container.elasticsearch.enabled: true
+#elastic:elastic
+# 此处设置elastic的用户名和密码
+elasticsearch.username: elastic
+elasticsearch.password: asdf2x2023
+# kibana elastic, asdf2x2023
+xpack.encryptedSavedObjects.encryptionKey: 95518b1fc81b210a26b63b43138c3c1e
+xpack.reporting.encryptionKey: 8c1a02a92d589b4383d4acb682f24532
+xpack.security.encryptionKey: e6e6e8a4566546bcb001bea96b5d3dd9

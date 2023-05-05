@@ -1,0 +1,92 @@
+# download docker desktop : https://www.docker.com/products/docker-desktop/
+version: "3.1"
+services:
+  elasticsearch:
+    image: registry.cn-shanghai.aliyuncs.com/ulooocom/magento2:ES-7.17.3
+    container_name: ekfg_es
+    restart: always
+    environment:
+      - cluster.name=elasticsearch
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ekfg-data:/usr/share/elasticsearch/data
+      - ./.docker/elasticsearch/plugins/IK/config/IKAnalyzer.cfg.xml:/usr/share/elasticsearch/plugins/elasticsearch-analysis-ik-7.17.3/config/IKAnalyzer.cfg.xml:ro
+      - ./.docker/elasticsearch/plugins/IK/config/custom_dict.dic:/usr/share/elasticsearch/plugins/elasticsearch-analysis-ik-7.17.3/config/custom_dict.dic:ro
+      - ./.docker/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./.docker/elasticsearch/config/jvm.options:/usr/share/elasticsearch/config/jvm.options
+      - ./.docker/elasticsearch/logs:/usr/share/elasticsearch/logs
+
+  elasticsearch-head:
+    image: registry.cn-shanghai.aliyuncs.com/ulooocom/magento2:ES-HEAD
+    container_name: ekfg_es_head
+    depends_on:
+      - elasticsearch
+    restart: always
+    ports:
+      - "9100:9100"
+    volumes:
+      - ./.docker/elasticsearch-head/config/Gruntfile.js:/usr/src/app/Gruntfile.js:ro
+
+  kibana:
+    image: registry.cn-shanghai.aliyuncs.com/ulooocom/magento2:kibana-7.17.3
+    container_name: ekfg_kibana
+    restart: always
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./.docker/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+
+  logstash:
+    image: registry.cn-shanghai.aliyuncs.com/ulooocom/magento2:logstash-8.7.0
+    restart: always
+    container_name: ekfg_logstash
+    environment:
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
+      - ELASTICSEARCH_URL="http://elasticsearch:9200"
+      - ELASTICSEARCH_HOSTS="http://elasticsearch:9200"
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=elastic2023fusc
+    depends_on:
+      - elasticsearch
+      - kibana
+    #ports:
+    #  - 5044:5044
+    volumes:
+      - ./.docker/logstash/config/logstash.conf:/usr/share/logstash/config/logstash.conf
+      - ./.docker/logstash/config/logstash-sample.conf:/usr/share/logstash/config/logstash-sample.conf
+      - ./.docker/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./.docker/logstash/logs/:/usr/share/logstash/logs/
+      - ./.docker/logstash/logstash_pipeline/:/usr/share/logstash/pipeline
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.7.0
+    container_name: ekfg_filebeat
+    restart: always
+    user: root
+    depends_on:
+      - elasticsearch
+      - logstash
+    environment:
+      - setup.kibana.host=kibana:5601
+      - output.elasticsearch.hosts=["elasticsearch:9200"]
+    volumes:
+      - ./.docker/filebeat/config/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./.docker/filebeat/config/nginx.yml:/usr/share/filebeat/modules.d/nginx.yml
+        # docker容器日志挂到本地
+      - ./.docker/filebeat/logs:/usr/share/filebeat/log
+        # filebeat 读取本地地址
+      - ./data:/data
+
+volumes:
+  ekfg-data:
